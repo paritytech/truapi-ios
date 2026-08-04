@@ -190,14 +190,22 @@ core.notifyPreimageChanged(key: preimageKey, value: preimageBytesOrNil)
 core.notifyChainResponse(connectionId: chainConnectionId, json: jsonRpcResponse)
 core.notifyChainClosed(connectionId: chainConnectionId)
 
+// Both scripts must be registered before the web view loads the product page,
+// and in this order: the bootstrap publishes the bridge endpoint on
+// `window.__truapi_localhost`; the container script then locks down the
+// page's platform APIs and reads that endpoint at eval time.
 let contentController = WKUserContentController()
 let bootstrapScript = LocalhostBridgeBootstrap.script(port: endpoint.port, token: endpoint.token)
-let userScript = WKUserScript(
+contentController.addUserScript(WKUserScript(
     source: bootstrapScript,
     injectionTime: .atDocumentStart,
     forMainFrameOnly: true
-)
-contentController.addUserScript(userScript)
+))
+contentController.addUserScript(WKUserScript(
+    source: try ContainerScriptBundle.load(),
+    injectionTime: .atDocumentStart,
+    forMainFrameOnly: true
+))
 
 let configuration = WKWebViewConfiguration()
 configuration.userContentController = contentController
